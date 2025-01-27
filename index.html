@@ -1,4 +1,186 @@
-<title>daf</title>
-<iframe width="695" height="391" src="https://www.youtube.com/embed/6Lz04qnk-oA" title="מרכז דף יומי - סנהדרין דף ז. - ר&#39; אלי סטפנסקי שליט&quot;א (לא ערוך)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-<iframe width="695" height="391" src="https://www.youtube.com/embed/SCjTcbNePgY" title="מרכז דף יומי - סנהדרין דף ח. - ר&#39; אלי סטפנסקי שליט&quot;א (לא ערוך)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-<iframe width="560" height="315" src="https://www.youtube.com/embed/VkXqtSEAv3E?si=9nNQp8Ih6PLVGA3r" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live DAF</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f8ff; /* Light blue background */
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #playlist-container {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background-color: #007bff; /* Blue background */
+      padding: 10px 0;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #playlist-container label {
+      font-size: 1.5em;
+      color: white;
+      margin-right: 10px;
+    }
+    #playlist-select {
+      width: 80%;
+      max-width: 1200px;
+      padding: 10px;
+      font-size: 1.2em;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    #video-container {
+      width: 80%;
+      max-width: 1200px;
+      margin-top: 80px; /* Add margin to avoid overlap with fixed menu */
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .video-item {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .video-item h3 {
+      margin-top: 0;
+    }
+    .loading {
+      font-size: 1.5em;
+      color: #555;
+    }
+    #load-more {
+      margin: 20px;
+      padding: 10px 20px;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      display: none;
+    }
+    #load-more:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div id="playlist-container">
+    <label for="playlist-select">Select a Playlist:</label>
+    <select id="playlist-select">
+      <option value="">Loading playlists...</option>
+    </select>
+  </div>
+  <div id="video-container" class="loading">Loading videos...</div>
+  <button id="load-more">See More</button>
+
+  <script>
+    const channelId = 'UCKwQa5DB_VR98ac_r-Wyl-g'; // Replace with the actual channel ID
+    const apiKey = 'AIzaSyAsyqFNrLuumdEPejAmfUWaNZ_YdDJAcKg'; // Replace with your YouTube Data API v3 key
+    let nextPageToken = '';
+    let currentPlaylistId = '';
+
+    async function getPlaylists(channelId, apiKey) {
+      try {
+        const response = await fetch(`https://www.googleapis.com/youtube/v3/playlists?key=${apiKey}&channelId=${channelId}&part=snippet&maxResults=20`);
+        const data = await response.json();
+        return data.items;
+      } catch (error) {
+        console.error('Error fetching playlists:', error);
+        return [];
+      }
+    }
+
+    async function getPlaylistVideos(playlistId, apiKey, pageToken = '') {
+      try {
+        const response = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?key=${apiKey}&playlistId=${playlistId}&part=snippet&maxResults=9&pageToken=${pageToken}`);
+        const data = await response.json();
+        nextPageToken = data.nextPageToken || '';
+        return data.items;
+      } catch (error) {
+        console.error('Error fetching videos:', error);
+        return [];
+      }
+    }
+
+    function createVideoElement(video) {
+      const title = video.snippet.title;
+      const videoId = video.snippet.resourceId.videoId;
+      const videoDiv = document.createElement('div');
+      videoDiv.className = 'video-item';
+      videoDiv.innerHTML = `
+        <h3>${title}</h3>
+        <iframe width="100%" height="200" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>
+      `;
+      return videoDiv;
+    }
+
+    function embedYouTubeVideos(videos) {
+      const container = document.getElementById('video-container');
+      container.classList.remove('loading');
+
+      videos.forEach(video => {
+        const videoElement = createVideoElement(video);
+        container.appendChild(videoElement);
+      });
+
+      const loadMoreButton = document.getElementById('load-more');
+      if (nextPageToken) {
+        loadMoreButton.style.display = 'block';
+      } else {
+        loadMoreButton.style.display = 'none';
+      }
+    }
+
+    async function loadPlaylists() {
+      const playlists = await getPlaylists(channelId, apiKey);
+      const playlistSelect = document.getElementById('playlist-select');
+      playlistSelect.innerHTML = ''; // Clear previous options
+
+      playlists.forEach(playlist => {
+        const option = document.createElement('option');
+        option.value = playlist.id;
+        option.textContent = playlist.snippet.title;
+        playlistSelect.appendChild(option);
+      });
+
+      playlistSelect.addEventListener('change', async (event) => {
+        const playlistId = event.target.value;
+        if (playlistId) {
+          currentPlaylistId = playlistId;
+          const container = document.getElementById('video-container');
+          container.innerHTML = "Loading videos...";
+          const videos = await getPlaylistVideos(playlistId, apiKey);
+          container.innerHTML = ''; // Clear previous content
+          embedYouTubeVideos(videos);
+        }
+      });
+    }
+
+    async function loadMoreVideos() {
+      if (currentPlaylistId && nextPageToken) {
+        const videos = await getPlaylistVideos(currentPlaylistId, apiKey, nextPageToken);
+        embedYouTubeVideos(videos);
+      }
+    }
+
+    document.getElementById('load-more').addEventListener('click', loadMoreVideos);
+
+    window.onload = loadPlaylists;
+  </script>
+</body>
+</html>
